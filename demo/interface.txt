@@ -1,0 +1,25 @@
+1、执行批量替换
+post请求  http://172.17.0.36:8000/qrcode-replace/replace
+{
+    "batch_no":"123456",
+    "original_image_url":"https://cdn.uuptai.com/zhuotie.jpg",
+    "compress_file_url":"https://cdn.uuptai.com/img1.zip",
+    "x":300,
+    "y":500,
+    "r":300,
+    "type":1,
+    "multiple":"1.85"
+}
+
+2、调试接口
+post请求  http://172.17.0.36:8000/qrcode-replace/debug
+{
+    "original_image_url":"https://cdn.uuptai.com/zhuotie.jpg",
+    "stick_img_url":"https://cdn.uuptai.com/5266.png",
+    "x":380,
+    "y":1100,
+    "r":300,
+    "type":1,
+    "multiple":"1.85"
+}
+
