@@ -147,6 +147,7 @@ async def forward(request: Request):
     # print(oss_url)
     # return {"image_url": oss_url}
     local_path = '/static/debug/' + random_string + '/result/' + original_image_full_name['full_file_name']
+    # return {"image_url": domain + local_path, "a": {"s": {"d": "v"}}, "m": [{"k": "v"}]}
     return {"image_url": domain + local_path}
 
 
