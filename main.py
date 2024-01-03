@@ -26,7 +26,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.mount("/image-plus/static", StaticFiles(directory="./static"), name="static")
+app.mount("/static", StaticFiles(directory="./static"), name="static")
 host = config['uvicorn']['host']
 port = int(config['uvicorn']['port'])
 domain = config['app']['domain']
@@ -112,7 +112,8 @@ async def forward(request: Request):
     multiple = data.get('multiple', 0)
     is_square = data.get('is_square', 0)
     side_length = data.get('side_length', 100)
-    save_path = './save/debug/' + generate_random_string(4) + '/'
+    random_string = generate_random_string(4)
+    save_path = './static/debug/' + random_string + '/'
 
     os.makedirs(save_path + 'draw_circle', exist_ok=True)
     os.makedirs(save_path + 'result', exist_ok=True)
@@ -139,12 +140,14 @@ async def forward(request: Request):
     result_draw_save_path = save_path + 'result/'
     paste_circle(draw_save_path, stick_image_full_path, result_draw_save_path, original_image_full_name['full_file_name'], int(x), int(y), int(type), float(multiple))
 
-    upload_oss_file_path = result_draw_save_path + original_image_full_name['full_file_name']
-    oss_url = upload_to_oss(upload_oss_file_path, 'static/' + original_image_full_name['full_file_name'])
-    # 删除文件
-    delete_folder(save_path)
-    print(oss_url)
-    return {"image_url": oss_url}
+    # upload_oss_file_path = result_draw_save_path + original_image_full_name['full_file_name']
+    # oss_url = upload_to_oss(upload_oss_file_path, 'static/' + original_image_full_name['full_file_name'])
+    # # 删除文件
+    # delete_folder(save_path)
+    # print(oss_url)
+    # return {"image_url": oss_url}
+    local_path = '/static/debug/' + random_string + '/result/' + original_image_full_name['full_file_name']
+    return {"image_url": domain + local_path}
 
 
 @app.post("/qrcode-replace/replace")
