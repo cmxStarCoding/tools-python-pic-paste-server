@@ -33,7 +33,7 @@ domain = config['app']['domain']
 file_cache = FileCache()
 
 
-async def long_running_task(original_image_url, compress_file_url, batch_no, x, y, r, type, multiple, is_square, side_length):
+async def long_running_task(original_image_url, compress_file_url, batch_no, x, y, r, type, multiple, is_square, side_length, notify_url):
     os.makedirs('./save/' + batch_no, exist_ok=True)
     # 下载并保存文件
     save_path = './save/' + batch_no + '/' + batch_no + '.zip'
@@ -76,11 +76,11 @@ async def long_running_task(original_image_url, compress_file_url, batch_no, x, 
         # 删除文件 上传到oss时可以删除文件
         # delete_folder('./save/' + batch_no)
         # print(oss_url, '异步任务完成oss_url')
-        url = config['notify']['batch_notify']
+        # notify_url = config['notify']['batch_notify']
         headers = {'Content-Type': 'application/json'}
         data = {'batch_no': batch_no, 'status': 1}
 
-        response = requests.post(url, headers=headers, data=json.dumps(data))
+        response = requests.post(notify_url, headers=headers, data=json.dumps(data))
         if response.status_code == 200:
             response_data = response.json()
 
@@ -158,11 +158,12 @@ async def forward(request: Request, background_tasks: BackgroundTasks):
     type = data.get('type', 0)
     multiple = data.get('multiple', 0)
     batch_no = data.get('batch_no', '')
+    notify_url = data.get('notify_url', '')
     is_square = data.get('is_square', 0)
     side_length = data.get('side_length', 100)
     do_replace = run_in_thread(long_running_task)
 
-    background_tasks.add_task(do_replace, original_image_url, compress_file_url, batch_no, int(x), int(y), int(r), int(type), float(multiple), int(is_square), int(side_length))
+    background_tasks.add_task(do_replace, original_image_url, compress_file_url, batch_no, int(x), int(y), int(r), int(type), float(multiple), int(is_square), int(side_length), notify_url)
     return {"message": 'ok'}
 
 
