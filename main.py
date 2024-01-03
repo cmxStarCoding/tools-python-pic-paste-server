@@ -72,19 +72,21 @@ async def long_running_task(original_image_url, compress_file_url, batch_no, x, 
     zip_folder(folder_path, output_path)
 
     if os.path.exists(output_path):
-        oss_url = upload_to_oss(output_path, 'zip/' + parse_filename(compress_file_url) + '.zip')
-        # 删除文件
-        delete_folder('./save/' + batch_no)
-        print(oss_url, '异步任务完成oss_url')
-        # url = config['notify']['batch_notify']
-        # headers = {'Content-Type': 'application/json'}
-        # data = {'batch_no': batch_no}
-        #
-        # response = requests.post(url, headers=headers, data=json.dumps(data))
-        # if response.status_code == 200:
-        #     response_data = response.json()
-        # else:
-        #     print(batch_no + '回调请求失败，状态码：', response.status_code)
+        # oss_url = upload_to_oss(output_path, 'zip/' + parse_filename(compress_file_url) + '.zip')
+        # 删除文件 上传到oss时可以删除文件
+        # delete_folder('./save/' + batch_no)
+        # print(oss_url, '异步任务完成oss_url')
+        url = config['notify']['batch_notify']
+        headers = {'Content-Type': 'application/json'}
+        data = {'batch_no': batch_no, 'status': 1}
+
+        response = requests.post(url, headers=headers, data=json.dumps(data))
+        if response.status_code == 200:
+            response_data = response.json()
+
+            print("回调返回数据", response_data)
+        else:
+            print(batch_no + '回调请求失败，状态码：', response.status_code)
     else:
         print(batch_no + '文件压缩失败：')
 
@@ -159,6 +161,7 @@ async def forward(request: Request, background_tasks: BackgroundTasks):
     is_square = data.get('is_square', 0)
     side_length = data.get('side_length', 100)
     do_replace = run_in_thread(long_running_task)
+
     background_tasks.add_task(do_replace, original_image_url, compress_file_url, batch_no, int(x), int(y), int(r), int(type), float(multiple), int(is_square), int(side_length))
     return {"message": 'ok'}
 
