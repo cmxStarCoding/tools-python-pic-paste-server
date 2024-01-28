@@ -33,7 +33,7 @@ domain = config['app']['domain']
 file_cache = FileCache()
 
 
-async def long_running_task(original_image_url, compress_file_url, batch_no, x, y, r, type, multiple, is_square, side_length, notify_url):
+async def long_running_task(original_image_url, compress_file_url, batch_no, x, y, r, type, multiple, bc_shape, side_length, notify_url, bc_color):
     os.makedirs('./save/' + batch_no, exist_ok=True)
     # 下载并保存文件
     save_path = './save/' + batch_no + '/' + batch_no + '.zip'
@@ -49,10 +49,14 @@ async def long_running_task(original_image_url, compress_file_url, batch_no, x, 
     original_image_path = './save/' + batch_no + '/' + original_image_info['full_file_name']
     draw_save_path = './save/' + batch_no + '/' + 'background_' + original_image_info['full_file_name']
 
-    if is_square == 0:
-        background_img_info = draw_circle(original_image_path, draw_save_path, x, y, r)
+    # 绘制圆形背景区域
+    if bc_shape == 1:
+        background_img_info = draw_circle(original_image_path, draw_save_path, x, y, r, bc_color)
+    # 绘制方形背景区域
+    elif bc_shape == 2:
+        background_img_info = draw_square(original_image_path, draw_save_path, x, y, side_length, bc_color)
     else:
-        background_img_info = draw_square(original_image_path, draw_save_path, x, y, side_length)
+        background_img_info = original_image_path
 
     for root, dirs, files in os.walk(folder_path, topdown=False):
         total_num = len(files)
@@ -71,24 +75,24 @@ async def long_running_task(original_image_url, compress_file_url, batch_no, x, 
     output_path = './save/' + batch_no + '/' + parse_filename(compress_file_url) + '.zip'
     zip_folder(folder_path, output_path)
 
-    if os.path.exists(output_path):
-        # oss_url = upload_to_oss(output_path, 'zip/' + parse_filename(compress_file_url) + '.zip')
-        # 删除文件 上传到oss时可以删除文件
-        # delete_folder('./save/' + batch_no)
-        # print(oss_url, '异步任务完成oss_url')
-        # notify_url = config['notify']['batch_notify']
-        headers = {'Content-Type': 'application/json'}
-        data = {'batch_no': batch_no, 'status': 1}
-
-        response = requests.post(notify_url, headers=headers, data=json.dumps(data))
-        if response.status_code == 200:
-            response_data = response.json()
-
-            print("回调返回数据", response_data)
-        else:
-            print(batch_no + '回调请求失败，状态码：', response.status_code)
-    else:
-        print(batch_no + '文件压缩失败：')
+    # if os.path.exists(output_path):
+    #     # oss_url = upload_to_oss(output_path, 'zip/' + parse_filename(compress_file_url) + '.zip')
+    #     # 删除文件 上传到oss时可以删除文件
+    #     # delete_folder('./save/' + batch_no)
+    #     # print(oss_url, '异步任务完成oss_url')
+    #     # notify_url = config['notify']['batch_notify']
+    #     headers = {'Content-Type': 'application/json'}
+    #     data = {'batch_no': batch_no, 'status': 1}
+    #
+    #     response = requests.post(notify_url, headers=headers, data=json.dumps(data))
+    #     if response.status_code == 200:
+    #         response_data = response.json()
+    #
+    #         print("回调返回数据", response_data)
+    #     else:
+    #         print(batch_no + '回调请求失败，状态码：', response.status_code)
+    # else:
+    #     print(batch_no + '文件压缩失败：')
 
 
 def run_in_thread(fn):
@@ -110,7 +114,8 @@ async def forward(request: Request):
     r = data.get('r', 0)
     type = data.get('type', 0)
     multiple = data.get('multiple', 0)
-    is_square = data.get('is_square', 0)
+    bc_shape = data.get('bc_shape', 0)
+    bc_color = data.get('bc_color', 'white')
     side_length = data.get('side_length', 100)
     random_string = generate_random_string(4)
     save_path = './static/debug/' + random_string + '/'
@@ -131,12 +136,15 @@ async def forward(request: Request):
     # 画圆
     draw_save_path = save_path + 'draw_circle/' + original_image_full_name['full_file_name']
 
-    if is_square == 0:
-        draw_circle(original_image_full_path, draw_save_path, int(x), int(y), int(r))
+    # 绘制圆形背景区域
+    if bc_shape == 1:
+        draw_circle(original_image_full_path, draw_save_path, int(x), int(y), int(r), bc_color)
+    # 绘制方形背景区域
+    elif bc_shape == 2:
+        draw_square(original_image_full_path, draw_save_path, int(x), int(y), int(side_length), bc_color)
     else:
-        draw_square(original_image_full_path, draw_save_path, int(x), int(y), int(side_length))
+        draw_save_path = original_image_full_path
 
-    # 合成
     result_draw_save_path = save_path + 'result/'
     paste_circle(draw_save_path, stick_image_full_path, result_draw_save_path, original_image_full_name['full_file_name'], int(x), int(y), int(type), float(multiple))
 
@@ -163,11 +171,12 @@ async def forward(request: Request, background_tasks: BackgroundTasks):
     multiple = data.get('multiple', 0)
     batch_no = data.get('batch_no', '')
     notify_url = data.get('notify_url', '')
-    is_square = data.get('is_square', 0)
+    bc_shape = data.get('bc_shape', 0)
+    bc_color = data.get('bc_color', 0)
     side_length = data.get('side_length', 100)
     do_replace = run_in_thread(long_running_task)
 
-    background_tasks.add_task(do_replace, original_image_url, compress_file_url, batch_no, int(x), int(y), int(r), int(type), float(multiple), int(is_square), int(side_length), notify_url)
+    background_tasks.add_task(do_replace, original_image_url, compress_file_url, batch_no, int(x), int(y), int(r), int(type), float(multiple), int(bc_shape), int(side_length), notify_url, bc_color)
     return {"message": 'ok'}
 
 

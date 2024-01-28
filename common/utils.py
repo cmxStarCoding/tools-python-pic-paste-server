@@ -1,7 +1,7 @@
 import os
 import random
 import string
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageColor
 import urllib.request
 import zipfile
 import requests
@@ -60,7 +60,7 @@ def unzip_file(zip_path, extract_path):
         zip_ref.extractall(extract_path)
 
 
-def draw_square(image_path, save_path, x, y, side_length):
+def draw_square(image_path, save_path, x, y, side_length, bc_color):
     # 打开图片并转换为RGB模式
     img = Image.open(image_path).convert("RGB")
     # 创建一个可以在图片上绘图的对象
@@ -72,22 +72,24 @@ def draw_square(image_path, save_path, x, y, side_length):
     bottom = y + side_length // 2
     square_coordinates = (left, top, right, bottom)
     # 绘制正方形区域
-    draw.rectangle(square_coordinates, fill="white")
+    draw.rectangle(square_coordinates, fill=bc_color)
     # 保存修改后的图片
     img.save(save_path)
     return save_path
 
 
 # 指定坐标点画白色圆形区域，保存新图
-def draw_circle(image_path, save_path, x, y, r):
+def draw_circle(image_path, save_path, x, y, r, bc_color):
     # 打开图片并转换为RGB模式
     img = Image.open(image_path).convert("RGB")
     # 创建一个可以在图片上绘图的对象
     draw = ImageDraw.Draw(img)
+    # 将十六进制颜色值转换为 RGB 格式
+    bc_color_rgb = ImageColor.getrgb(bc_color)
     # 设置圆形区域的坐标点和半径
     circle_coordinates = (x - r, y - r, x + r, y + r)
     # 绘制圆形区域
-    draw.ellipse(circle_coordinates, fill="white")
+    draw.ellipse(circle_coordinates, fill=bc_color_rgb)
     # 保存修改后的图片
     img.save(save_path)
 
@@ -104,10 +106,11 @@ def draw_circle(image_path, save_path, x, y, r):
 # 合成新图并保存
 def paste_circle(image_path, circle_image_path, folder_path, relative_path, x, y, type, multiple):
     # 打开背景图片
-    background_img = Image.open(image_path)
-
+    background_img = Image.open(image_path).convert("RGBA")
     # 打开圆形图片
     circle_img = Image.open(circle_image_path)
+    # 确保图像有透明度通道
+    circle_img = circle_img.convert("RGBA")
 
     if type == 1:
         # 计算圆形图片的左上角坐标
@@ -129,7 +132,7 @@ def paste_circle(image_path, circle_image_path, folder_path, relative_path, x, y
     background_img.paste(circle_img, (circle_x, circle_y), mask=circle_img)
 
     # 保存生成的新图片
-    background_img.save(folder_path + relative_path)
+    background_img.convert("RGB").save(folder_path + relative_path)
 
 
 # 调用函数来生成新图片
