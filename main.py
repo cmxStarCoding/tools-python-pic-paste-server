@@ -72,27 +72,30 @@ async def long_running_task(original_image_url, compress_file_url, batch_no, x, 
 
     # 压缩文件 压缩包上传到oss 通知php
     folder_path = './save/' + batch_no + '/' + parse_filename(compress_file_url)
-    output_path = './save/' + batch_no + '/' + parse_filename(compress_file_url) + '.zip'
-    zip_folder(folder_path, output_path)
 
-    # if os.path.exists(output_path):
-    #     # oss_url = upload_to_oss(output_path, 'zip/' + parse_filename(compress_file_url) + '.zip')
-    #     # 删除文件 上传到oss时可以删除文件
-    #     # delete_folder('./save/' + batch_no)
-    #     # print(oss_url, '异步任务完成oss_url')
-    #     # notify_url = config['notify']['batch_notify']
-    #     headers = {'Content-Type': 'application/json'}
-    #     data = {'batch_no': batch_no, 'status': 1}
-    #
-    #     response = requests.post(notify_url, headers=headers, data=json.dumps(data))
-    #     if response.status_code == 200:
-    #         response_data = response.json()
-    #
-    #         print("回调返回数据", response_data)
-    #     else:
-    #         print(batch_no + '回调请求失败，状态码：', response.status_code)
-    # else:
-    #     print(batch_no + '文件压缩失败：')
+    os.makedirs('./static/pic_result/' + batch_no, exist_ok=True)
+    output_path = '/static/pic_result/' + batch_no + '/' + parse_filename(compress_file_url) + '.zip'
+    zip_folder(folder_path, '.' + output_path)
+
+    if os.path.exists('.' + output_path):
+        # oss_url = upload_to_oss(output_path, 'zip/' + parse_filename(compress_file_url) + '.zip')
+        # 删除文件 上传到oss时可以删除文件
+        # delete_folder('./save/' + batch_no)
+        # print(oss_url, '异步任务完成oss_url')
+        # notify_url = config['notify']['batch_notify']
+
+        headers = {'Content-Type': 'application/json'}
+        data = {'batch_no': batch_no, 'status': 1, 'file_path': domain + output_path}
+
+        response = requests.post(notify_url, headers=headers, data=json.dumps(data))
+        if response.status_code == 200:
+            response_data = response.json()
+
+            print("回调返回数据", response_data)
+        else:
+            print(batch_no + '回调请求失败，状态码：', response.status_code)
+    else:
+        print(batch_no + '文件压缩失败：')
 
 
 def run_in_thread(fn):
@@ -174,6 +177,10 @@ async def forward(request: Request, background_tasks: BackgroundTasks):
     bc_shape = data.get('bc_shape', 0)
     bc_color = data.get('bc_color', 0)
     side_length = data.get('side_length', 100)
+    print("回调url是", notify_url)
+    print("压缩包是", compress_file_url)
+
+
     do_replace = run_in_thread(long_running_task)
 
     background_tasks.add_task(do_replace, original_image_url, compress_file_url, batch_no, int(x), int(y), int(r), int(type), float(multiple), int(bc_shape), int(side_length), notify_url, bc_color)
